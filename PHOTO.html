@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الصفحة الرئيسية</title>
+  <style>
+    body {
+      background-color: black;
+      color: #00ff00;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin: 10px 5px;
+      background-color: #00ff00;
+      color: black;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #008000;
+    }
+    .message {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #333;
+      color: #00ff00;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-size: 16px;
+      display: none;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <h1>الصفحة الرئيسية</h1>
+  <input type="text" id="studentId" placeholder="أدخل رقم الضحيه">
+  <br>
+  <button id="capture">التقاط صورة</button>
+  <button id="save">حفظ في المعرض</button>
+  <button onclick="window.location.href='gallery.html'">معرض الصور</button>
+  <div id="message" class="message"></div>
+
+  <script>
+    const studentIdInput = document.getElementById('studentId');
+    const captureButton = document.getElementById('capture');
+    const saveButton = document.getElementById('save');
+    const messageBox = document.getElementById('message');
+
+    let capturedImages = [];
+    let videoStream;
+
+    // تشغيل الكاميرا في الخلفية
+    navigator.mediaDevices
+      .getUserMedia({ video: true })
+      .then((stream) => {
+        videoStream = stream;
+      })
+      .catch((err) => {
+        showMessage("فشل في تشغيل الكاميرا", true);
+        console.error("فشل في تشغيل الكاميرا:", err);
+      });
+
+    // عرض رسالة
+    function showMessage(text, isError = false) {
+      messageBox.textContent = text;
+      messageBox.style.backgroundColor = isError ? "#800000" : "#333";
+      messageBox.style.color = isError ? "#ff4d4d" : "#00ff00";
+      messageBox.style.display = "block";
+      setTimeout(() => {
+        messageBox.style.display = "none";
+      }, 3000);
+    }
+
+    // التقاط صورة
+    captureButton.addEventListener('click', () => {
+      const studentId = studentIdInput.value.trim();
+
+      if (!studentId) {
+        showMessage("يرجى إدخال رقم الطالب قبل التقاط الصورة", true);
+        return;
+      }
+
+      const videoTrack = videoStream.getVideoTracks()[0];
+      const imageCapture = new ImageCapture(videoTrack);
+
+      imageCapture.takePhoto()
+        .then((blob) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            capturedImages.push(reader.result);
+            showMessage("تم التقاط الصورة بنجاح");
+          };
+          reader.readAsDataURL(blob);
+        })
+        .catch((err) => {
+          showMessage("فشل في التقاط الصورة", true);
+          console.error("فشل في التقاط الصورة:", err);
+        });
+    });
+
+    // حفظ الصور في LocalStorage
+    saveButton.addEventListener('click', () => {
+      const studentId = studentIdInput.value.trim();
+
+      if (!studentId || capturedImages.length === 0) {
+        showMessage("يرجى إدخال رقم الطالب والتقاط الصور أولاً", true);
+        return;
+      }
+
+      let gallery = JSON.parse(localStorage.getItem('gallery')) || [];
+      gallery.push({ studentId, images: capturedImages });
+      localStorage.setItem('gallery', JSON.stringify(gallery));
+
+      showMessage("تم حفظ الصور في المعرض");
+      capturedImages = [];
+    });
+  </script>
+</body>
+</html>
